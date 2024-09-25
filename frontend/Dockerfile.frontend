@@ -1,0 +1,17 @@
+# Используем образ astralinux
+FROM registry.astralinux.ru/library/astra/ubi18@sha256:cce3f92795b6dfe115aef84377e812c1a76ebbc41c2e07dbcbc85f766076080c
+
+# Обновляем репозитории и устанавливаем nginx
+RUN apt update -y && apt install -y nginx
+
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Копируем файлы фронтенда в директорию nginx
+COPY index.html /var/www/html/
+COPY app.js /var/www/html/
+
+# Экспонируем порт
+EXPOSE 80
+
+# Запускаем nginx
+CMD ["nginx", "-g", "daemon off;"]

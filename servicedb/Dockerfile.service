@@ -1,0 +1,13 @@
+# Используем образ astralinux
+FROM registry.astralinux.ru/library/astra/ubi18-python311@sha256:51e12255c79d5b69684924cc49af2d28e263148dd9dd787d4da2f950af4d7d3d
+
+# Копируем приложение в контейнер
+WORKDIR /app
+COPY service.py /app
+COPY requirements.txt /app
+
+# Устанавливаем зависимости
+RUN pip install --break-system-packages -r requirements.txt
+
+# Запускаем приложение
+CMD ["python3", "service.py"]

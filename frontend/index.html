@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация Обращений</title>
+</head>
+<body>
+    <h1>Форма обращения</h1>
+    <form id="requestForm">
+        <input type="text" id="lastname" placeholder="Фамилия" required />
+        <input type="text" id="firstname" placeholder="Имя" required />
+        <input type="text" id="middlename" placeholder="Отчество" required />
+        <input type="tel" id="phone" placeholder="Телефон" required />
+        <textarea id="message" placeholder="Обращение" required></textarea>
+        <button type="submit">Отправить</button>
+    </form>
+    <div id="statusMessage"></div>
+
+    <script>
+      document.getElementById('requestForm').addEventListener('submit', function(event) {
+          event.preventDefault(); // Предотвращаем отправку формы
+
+          const formData = {
+              lastname: document.getElementById('lastname').value,
+              firstname: document.getElementById('firstname').value,
+              middlename: document.getElementById('middlename').value,
+              phone: document.getElementById('phone').value,
+              message: document.getElementById('message').value
+          };
+
+          fetch('https://rostelecom.mishazx.ru/api/request', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(formData)
+          })
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Ошибка сети');
+              }
+              return response.json();
+          })
+          .then(data => {
+              console.log('Успех:', data);
+              document.getElementById('statusMessage').innerText = 'Обращение успешно отправлено!';
+              // Сброс формы
+              document.getElementById('requestForm').reset();
+          })
+          .catch((error) => {
+              console.error('Ошибка:', error);
+              document.getElementById('statusMessage').innerText = 'Произошла ошибка при отправке. Попробуйте еще раз.';
+          });
+      });
+    </script>
+</body>
+</html>
