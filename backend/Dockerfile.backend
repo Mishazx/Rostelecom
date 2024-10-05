@@ -5,6 +5,8 @@ FROM registry.astralinux.ru/library/astra/ubi18-python311@sha256:51e12255c79d5b6
 WORKDIR /app
 COPY server.py /app
 COPY requirements.txt /app
+COPY templates /app/templates
+
 
 # Устанавливаем зависимости
 RUN pip install --break-system-packages -r requirements.txt

@@ -1,8 +1,13 @@
+import os
 import time
-import pika
-import psycopg2
 import json
 import logging
+
+import pika
+import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -12,15 +17,22 @@ logger = logging.getLogger(__name__)
 MAX_RETRIES = 5
 RETRY_DELAY = 2
 
+
+DB_USER = os.getenv('POSTGRES_USER')
+DB_PASSWORD = os.getenv('POSTGRES_PASSWORD')
+DB_NAME = os.getenv('POSTGRES_DB')
+
+RABBITMQ_USERNAME = os.getenv('RABBITMQ_DEFAULT_USER')
+RABBITMQ_PASSWORD = os.getenv('RABBITMQ_DEFAULT_PASS')
+
 def connect_to_database():
     for attempt in range(MAX_RETRIES):
         try:
             connection = psycopg2.connect(        
-              user="postgres",
-              password="mishazx",
-              host="95.165.102.189",
-              port="5444",
-              dbname="registration"
+              user=DB_USER,
+              password=DB_PASSWORD,
+              host='db',
+              dbname=DB_NAME
               )
             logger.info("Успешное подключение к базе данных.")
             return connection
@@ -35,7 +47,7 @@ def connect_to_rabbitmq():
         try:
             connection = pika.BlockingConnection(pika.ConnectionParameters(
                 host='rabbitmq',
-                credentials=pika.PlainCredentials('user', 'password')
+                credentials=pika.PlainCredentials(RABBITMQ_USERNAME, RABBITMQ_PASSWORD)
             ))
             logger.info("Успешное подключение к RabbitMQ.")
             return connection
@@ -65,7 +77,16 @@ def callback(ch, method, properties, body):
     conn = connect_to_database()
     cur = conn.cursor()
     try:
-        cur.execute("INSERT INTO requests (lastname, firstname, middlename, phone, message) VALUES (%s, %s, %s, %s, %s)",
+        cur.execute("""
+            SELECT to_regclass('public.appeal');
+        """)
+        table_exists = cur.fetchone()[0] is not None
+        
+        if not table_exists:
+            logger.error('Таблица "appeal" не найдена.')
+            return
+
+        cur.execute("INSERT INTO appeal (lastname, firstname, middlename, phone, message) VALUES (%s, %s, %s, %s, %s)",
                     (data['lastname'], data['firstname'], data['middlename'], data['phone'], data['message']))
         conn.commit()
         logger.info('Данные записаны в БД')
@@ -81,7 +102,7 @@ logger.info('Start service!')
 
 connection = connect_to_rabbitmq()
 channel = connection.channel()
-channel.queue_declare(queue='requests')
-channel.basic_consume(queue='requests', on_message_callback=callback, auto_ack=True)
+channel.queue_declare(queue='queue_appeal')
+channel.basic_consume(queue='queue_appeal', on_message_callback=callback, auto_ack=True)
 
 channel.start_consuming()
