@@ -13,8 +13,8 @@ logging.basicConfig(level=logging.INFO,
 
 logger = logging.getLogger(__name__)
 
-RABBITMQ_USERNAME = os.getenv('RABBITMQ_DEFAULT_USER')
-RABBITMQ_PASSWORD = os.getenv('RABBITMQ_DEFAULT_PASS')
+RABBITMQ_USERNAME = os.getenv('RABBITMQ_DEFAULT_USER', 'guest')
+RABBITMQ_PASSWORD = os.getenv('RABBITMQ_DEFAULT_PASS', 'guest')
 
 class MainHandler(web.RequestHandler):
     def get(self):

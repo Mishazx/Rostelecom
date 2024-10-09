@@ -23,9 +23,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -41,11 +38,10 @@ services:
       timeout: 5s
       retries: 5
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     ports:
-      - "5444:5432"
+      - "5432:5432"
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
       - db_data:/var/lib/postgresql/data
@@ -57,9 +53,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.backend
-    environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
     ports: 
       - "5000:5000"
     depends_on:
@@ -82,8 +75,6 @@ services:
       - servicedb_data:/usr/data
     networks:
       - my_network
-    env_file:
-      - .env
 
 
 networks:

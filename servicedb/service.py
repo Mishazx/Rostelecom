@@ -18,12 +18,12 @@ MAX_RETRIES = 5
 RETRY_DELAY = 2
 
 
-DB_USER = os.getenv('POSTGRES_USER')
-DB_PASSWORD = os.getenv('POSTGRES_PASSWORD')
-DB_NAME = os.getenv('POSTGRES_DB')
+DB_USER = os.getenv('POSTGRES_USER', 'postgres')
+DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'postgres')
+DB_NAME = os.getenv('POSTGRES_DB', 'postgres')
 
-RABBITMQ_USERNAME = os.getenv('RABBITMQ_DEFAULT_USER')
-RABBITMQ_PASSWORD = os.getenv('RABBITMQ_DEFAULT_PASS')
+RABBITMQ_USERNAME = os.getenv('RABBITMQ_DEFAULT_USER', 'guest')
+RABBITMQ_PASSWORD = os.getenv('RABBITMQ_DEFAULT_PASS', 'guest')
 
 def connect_to_database():
     for attempt in range(MAX_RETRIES):
