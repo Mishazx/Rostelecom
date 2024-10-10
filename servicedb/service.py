@@ -14,8 +14,8 @@ logging.basicConfig(level=logging.INFO,
 
 logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 5
-RETRY_DELAY = 2
+MAX_RETRIES = 10
+RETRY_DELAY = 3
 
 DB_USER = os.getenv('POSTGRES_USER', 'postgres')
 DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'postgres')
@@ -98,10 +98,27 @@ class Service:
             self.db_connection.rollback()
         finally:
             cur.close()
+            
 
     def start(self):
-        logger.info('Start service!')
-        self.rabbitmq_channel.start_consuming()
+        try:
+            logger.info('Start service!')
+            self.rabbitmq_channel.start_consuming()
+        except Exception as e:
+            logger.error(f'Произошла ошибка: {e}')
+        finally:
+            self.stop()
+        
+        
+    def stop(self):
+        logger.info('Завершение работы службы...')
+        self.rabbitmq_channel.stop_consuming()
+        if self.rabbitmq_connection:
+            self.rabbitmq_connection.close()
+            logger.info('Подключение к RabbitMQ закрыто.')
+        if self.db_connection:
+            self.db_connection.close()
+            logger.info('Подключение к базе данных закрыто.')
 
 if __name__ == "__main__":
     service = Service()

@@ -22,6 +22,7 @@ RABBITMQ_PASSWORD = os.getenv('RABBITMQ_DEFAULT_PASS', 'guest')
 
 
 def connect_to_rabbitmq():
+    
     for attempt in range(MAX_RETRIES):
         try:
             connection = pika.BlockingConnection(pika.ConnectionParameters(
@@ -49,7 +50,9 @@ class RabbitMQConnection:
         self.channel.basic_publish(exchange='', routing_key='queue_appeal', body=json.dumps(data))
 
     def close(self):
-        self.connection.close()
+        if self.connection:
+            self.connection.close()
+            logger.info('Подключение к RabbitMQ закрыто.')
 
 
 rabbitmq_connection = RabbitMQConnection()
@@ -80,5 +83,10 @@ if __name__ == '__main__':
     logger.info('Start backend server!')
     app = make_app()
     app.listen(5000)
-    ioloop.IOLoop.current().start()
-
+    try:
+        ioloop.IOLoop.current().start()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        rabbitmq_connection.close()
+        executor.shutdown(wait=True)
