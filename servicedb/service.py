@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 MAX_RETRIES = 5
 RETRY_DELAY = 2
 
-
 DB_USER = os.getenv('POSTGRES_USER', 'postgres')
 DB_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'postgres')
 DB_NAME = os.getenv('POSTGRES_DB', 'postgres')
@@ -29,18 +28,19 @@ def connect_to_database():
     for attempt in range(MAX_RETRIES):
         try:
             connection = psycopg2.connect(        
-              user=DB_USER,
-              password=DB_PASSWORD,
-              host='db',
-              dbname=DB_NAME
-              )
+                user=DB_USER,
+                password=DB_PASSWORD,
+                host='db',
+                dbname=DB_NAME
+            )
             logger.info("Успешное подключение к базе данных.")
             return connection
         except psycopg2.OperationalError:
             logger.warning(f"Попытка подключения к базе данных {attempt + 1}/{MAX_RETRIES} не удалась. "
-                  f"Повтор через {RETRY_DELAY} секунд.")
+                           f"Повтор через {RETRY_DELAY} секунд.")
             time.sleep(RETRY_DELAY)
     raise Exception("Не удалось подключиться к базе данных после нескольких попыток.")
+
 
 def connect_to_rabbitmq():
     for attempt in range(MAX_RETRIES):
@@ -53,10 +53,9 @@ def connect_to_rabbitmq():
             return connection
         except pika.exceptions.AMQPConnectionError:
             logger.warning(f"Попытка подключения к RabbitMQ {attempt + 1}/{MAX_RETRIES} не удалась. "
-                  f"Повтор через {RETRY_DELAY} секунд.")
+                           f"Повтор через {RETRY_DELAY} секунд.")
             time.sleep(RETRY_DELAY)
     raise Exception("Не удалось подключиться к RabbitMQ после нескольких попыток.")
-
 
 def validate_data(data):
     required_keys = ['lastname', 'firstname', 'middlename', 'phone', 'message']
@@ -66,43 +65,44 @@ def validate_data(data):
             return False
     return True
 
+class Service:
+    def __init__(self):
+        self.db_connection = connect_to_database()
+        self.rabbitmq_connection = connect_to_rabbitmq()
+        self.rabbitmq_channel = self.rabbitmq_connection.channel()
+        self.rabbitmq_channel.queue_declare(queue='queue_appeal')
+        self.rabbitmq_channel.basic_consume(queue='queue_appeal', on_message_callback=self.callback, auto_ack=True)
 
-def callback(ch, method, properties, body):
-    data = json.loads(body)
-    
-    if not validate_data(data):
-        logger.error('Некорректные данные, пропуск записи в БД.')
-        return
-
-    conn = connect_to_database()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT to_regclass('public.appeal');
-        """)
-        table_exists = cur.fetchone()[0] is not None
+    def callback(self, ch, method, properties, body):
+        data = json.loads(body)
         
-        if not table_exists:
-            logger.error('Таблица "appeal" не найдена.')
+        if not validate_data(data):
+            logger.error('Некорректные данные, пропуск записи в БД.')
             return
+        
+        cur = self.db_connection.cursor()
+        try:
+            cur.execute("SELECT to_regclass('public.appeal');")
+            table_exists = cur.fetchone()[0] is not None
+            
+            if not table_exists:
+                logger.error('Таблица "appeal" не найдена.')
+                return
 
-        cur.execute("INSERT INTO appeal (lastname, firstname, middlename, phone, message) VALUES (%s, %s, %s, %s, %s)",
-                    (data['lastname'], data['firstname'], data['middlename'], data['phone'], data['message']))
-        conn.commit()
-        logger.info('Данные записаны в БД')
-    except (Exception, psycopg2.DatabaseError) as error:
-        logger.error(f'Ошибка при записи в БД: {error}')
-        conn.rollback()
-    finally:
-        cur.close()
-        conn.close()
+            cur.execute("INSERT INTO appeal (lastname, firstname, middlename, phone, message) VALUES (%s, %s, %s, %s, %s)",
+                        (data['lastname'], data['firstname'], data['middlename'], data['phone'], data['message']))
+            self.db_connection.commit()
+            logger.info('Данные записаны в БД')
+        except (Exception, psycopg2.DatabaseError) as error:
+            logger.error(f'Ошибка при записи в БД: {error}')
+            self.db_connection.rollback()
+        finally:
+            cur.close()
 
-    
-logger.info('Start service!')
+    def start(self):
+        logger.info('Start service!')
+        self.rabbitmq_channel.start_consuming()
 
-connection = connect_to_rabbitmq()
-channel = connection.channel()
-channel.queue_declare(queue='queue_appeal')
-channel.basic_consume(queue='queue_appeal', on_message_callback=callback, auto_ack=True)
-
-channel.start_consuming()
+if __name__ == "__main__":
+    service = Service()
+    service.start()

@@ -2,3 +2,4 @@ pytest
 pika
 requests
 python-dotenv
+psutil
