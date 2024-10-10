@@ -14,8 +14,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 5
-RETRY_DELAY = 2
+MAX_RETRIES = 10
+RETRY_DELAY = 3
 
 RABBITMQ_USERNAME = os.getenv('RABBITMQ_DEFAULT_USER', 'guest')
 RABBITMQ_PASSWORD = os.getenv('RABBITMQ_DEFAULT_PASS', 'guest')
