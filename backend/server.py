@@ -56,7 +56,7 @@ class RabbitMQConnection:
 
 
 rabbitmq_connection = RabbitMQConnection()
-executor = ThreadPoolExecutor()
+executor = ThreadPoolExecutor(max_workers=2)
 
 
 class MainHandler(web.RequestHandler):
@@ -65,11 +65,18 @@ class MainHandler(web.RequestHandler):
 
 
 class AppealHandler(web.RequestHandler):
-    def post(self):
+    async def post(self):
         data = json.loads(self.request.body)
         logger.info(f'Данные от пользователя: {data}')
-        executor.submit(rabbitmq_connection.publish, data)
-        self.write({'status': 'success'})
+        
+        future = executor.submit(rabbitmq_connection.publish, data)
+        
+        try:
+            future.result()
+            self.write({'status': 'success'})
+        except Exception as e:
+            logger.error(f'Ошибка при публикации данных: {e}')
+            self.write({'status': 'failure', 'error': str(e)})
 
 
 def make_app():
